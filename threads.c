@@ -26,8 +26,13 @@ enum thread_status
  * Hint, remember what information Linux maintains for each task?
  */
 struct thread_control_block {
-};
+  pthread_t tid;
+  enum thread_status t_stat
+  jmp_buf buf;
+  
 
+};
+struct thread_control_block queue[128];
 
 static void schedule(int signal)
 {
