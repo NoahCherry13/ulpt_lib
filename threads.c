@@ -10,8 +10,8 @@
 #define THREAD_STACK_SIZE (1<<15)	/* size of stack in bytes */
 #define QUANTUM (50 * 1000)		/* quantum in usec */
 
-static useconds_t quant = (useconds_t)QUANTUM
-static 
+static useconds_t quant = (useconds_t)QUANTUM;
+static struct sigaction handler;
 
 /* 
    Thread_status identifies the current state of a thread. What states could a thread be in?
@@ -21,7 +21,8 @@ enum thread_status
 {
  TS_EXITED,
  TS_RUNNING,
- TS_READY
+ TS_READY,
+ TS_FREE
 };
 
 /* The thread control block stores information about a thread. You will
@@ -30,9 +31,9 @@ enum thread_status
  */
 struct thread_control_block {
   pthread_t tid;
-  enum thread_status t_stat
+  enum thread_status t_stat = TS_FREE;
   jmp_buf buf;
-  
+  int *s_ptr;
 
 };
 
@@ -60,6 +61,17 @@ static void schedule(int signal) __attribute__((unused));
 
 static void scheduler_init()
 {
+  //set tcb for calling thread
+  queue[0].tid = 0;
+  queue[0].t_stat = READY;
+
+  ualarm(quant, quant);
+  
+  //setup sighandler to call schedule when timer goes off
+  sigemptyset(&signalHandle.sa_mask);
+  signalHandle.sa_flags = SA_NODEFER;
+  sigaction(SIGALRM, &signalHandle, NULL);
+  signalHandle.sa_handler = &schedule;
   /* 
      TODO: do everything that is needed to initialize your scheduler.
      For example:
@@ -67,6 +79,7 @@ static void scheduler_init()
      - create a TCB for the main thread. so your scheduler will be able to schedule it
      - set up your timers to call scheduler...
   */
+  
 }
 
 int pthread_create(
