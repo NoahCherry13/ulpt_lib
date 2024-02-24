@@ -92,7 +92,20 @@ int pthread_create(
     is_first_call = false;
     scheduler_init();
   }
-  
+  int queue_ind = 1;
+  //---------------Initialize TCB----------------------------
+  while (queue_ind < MAX_THREADS && queue[queue_ind].t_stat != FREE) {   //loop through queue until free index
+    queue_ind++;
+  }
+ 
+  if(queue_ind == MAX_THREADS){   //Return error if no free index
+    fprintf(stderr, "MAX THREADS IN QUEUE\n");
+    return -1;
+  }
+  queue[queue_ind].s_ptr = malloc(THREAD_STACK_SIZE);
+  queue[queue_ind].t_stat = READY;
+  setjmp(queue[queue_ind].buf);
+  queue[queue_int].tid = queue_ind;
   /* TODO: Return 0 on successful thread creation, non-zero for an error.
    *       Be sure to set *thread on success.
    *
