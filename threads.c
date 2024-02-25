@@ -4,7 +4,9 @@
 #include <setjmp.h>
 #include <assert.h>
 #include "ec440threads.h"
-
+#include <signal.h>
+#include <unistd.h>
+#include <stdio.h>
 //-------------------------------------Initial Definitions ----------------------------------------------------------
 #define MAX_THREADS 128			/* number of threads you support */
 #define THREAD_STACK_SIZE (1<<15)	/* size of stack in bytes */
@@ -31,14 +33,13 @@ enum thread_status
  */
 struct thread_control_block {
   pthread_t tid;
-  enum thread_status t_stat = TS_FREE;
+  enum thread_status t_stat;
   jmp_buf buf;
   int *s_ptr;
-
 };
 
 static struct thread_control_block queue[128];
-static int t_running;
+//static int t_running;
 
 
 
@@ -63,15 +64,15 @@ static void scheduler_init()
 {
   //set tcb for calling thread
   queue[0].tid = 0;
-  queue[0].t_stat = READY;
+  queue[0].t_stat = TS_READY;
 
   ualarm(quant, quant);
   
   //setup sighandler to call schedule when timer goes off
-  sigemptyset(&signalHandle.sa_mask);
-  signalHandle.sa_flags = SA_NODEFER;
-  sigaction(SIGALRM, &signalHandle, NULL);
-  signalHandle.sa_handler = &schedule;
+  sigemptyset(&handler.sa_mask);
+  handler.sa_flags = SA_NODEFER;
+  sigaction(SIGALRM, &handler, NULL);
+  handler.sa_handler = &schedule;
   /* 
      TODO: do everything that is needed to initialize your scheduler.
      For example:
@@ -94,7 +95,7 @@ int pthread_create(
   }
   int queue_ind = 1;
   //---------------Initialize TCB----------------------------
-  while (queue_ind < MAX_THREADS && queue[queue_ind].t_stat != FREE) {   //loop through queue until free index
+  while (queue_ind < MAX_THREADS && queue[queue_ind].t_stat != TS_FREE) {   //loop through queue until free index
     queue_ind++;
   }
  
@@ -102,16 +103,20 @@ int pthread_create(
     fprintf(stderr, "MAX THREADS IN QUEUE\n");
     return -1;
   }
-  *thead = queue_ind;
+
+  *thread = queue_ind;
   queue[queue_ind].s_ptr = malloc(THREAD_STACK_SIZE);
-  queue[queue_ind].buf.__jmpbuf[JB_R12] = (unsigned long int) start_routine;
-  queue[queue_ind].buf.__jmpbuf[JB_R13] = (unsigned long int) arg;
-  queue[queue_ind].buf.__jmpbuf[JB_PC] = ptr_mangle((unsigned long int)start_thunk);
-  queue[queue_ind].buf.__jmpbuf[JB_RSP] = ptr_mangle((unsigned long int)(queue[queue_ind].s_ptr + THREAD_STACK_SIZE/4 - 2));
-  queue[queue_ind].s_ptr + THREAD_STACK_SIZE/4-2
-  queue[queue_ind].t_stat = READY;
+  queue[queue_ind].buf->__jmpbuf[JBL_R12] = (unsigned long int) start_routine;
+  queue[queue_ind].buf->__jmpbuf[JBL_R13] = (unsigned long int) arg;
+  queue[queue_ind].buf->__jmpbuf[JBL_PC] = _ptr_mangle((unsigned long int)start_thunk);
+  queue[queue_ind].buf->__jmpbuf[JBL_RSP] = _ptr_mangle((unsigned long int)(queue[queue_ind].s_ptr + THREAD_STACK_SIZE/4 - 2));
+  *(unsigned long*)(queue[queue_ind].s_ptr + THREAD_STACK_SIZE/4-2) = (unsigned long int)pthread_exit;
+  queue[queue_ind].t_stat = TS_READY;
   setjmp(queue[queue_ind].buf);
-  queue[queue_int].tid = queue_ind;
+  queue[queue_ind].tid = queue_ind;
+
+
+  
   /* TODO: Return 0 on successful thread creation, non-zero for an error.
    *       Be sure to set *thread on success.
    *
