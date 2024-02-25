@@ -105,6 +105,10 @@ int pthread_create(
   *thead = queue_ind;
   queue[queue_ind].s_ptr = malloc(THREAD_STACK_SIZE);
   queue[queue_ind].buf.__jmpbuf[JB_R12] = (unsigned long int) start_routine;
+  queue[queue_ind].buf.__jmpbuf[JB_R13] = (unsigned long int) arg;
+  queue[queue_ind].buf.__jmpbuf[JB_PC] = ptr_mangle((unsigned long int)start_thunk);
+  queue[queue_ind].buf.__jmpbuf[JB_RSP] = ptr_mangle((unsigned long int)(queue[queue_ind].s_ptr + THREAD_STACK_SIZE/4 - 2));
+  queue[queue_ind].s_ptr + THREAD_STACK_SIZE/4-2
   queue[queue_ind].t_stat = READY;
   setjmp(queue[queue_ind].buf);
   queue[queue_int].tid = queue_ind;
