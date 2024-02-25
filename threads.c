@@ -102,7 +102,9 @@ int pthread_create(
     fprintf(stderr, "MAX THREADS IN QUEUE\n");
     return -1;
   }
+  *thead = queue_ind;
   queue[queue_ind].s_ptr = malloc(THREAD_STACK_SIZE);
+  queue[queue_ind].buf.__jmpbuf[JB_R12] = (unsigned long int) start_routine;
   queue[queue_ind].t_stat = READY;
   setjmp(queue[queue_ind].buf);
   queue[queue_int].tid = queue_ind;
