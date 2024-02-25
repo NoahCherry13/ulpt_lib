@@ -54,10 +54,11 @@ count(void *arg)
 int main(int argc, char **argv) {
   pthread_t threads[THREAD_CNT];
   unsigned long int i;
+  printf("making threads\n");
   for(i = 0; i < THREAD_CNT; i++) {
     pthread_create(&threads[i], NULL, count, (void *)i);
   }
-  
+  printf("Created all the threads\n");
   /* Collect statuses of the other threads, waiting for them to finish */
   for(i = 0; i < THREAD_CNT; i++) {
     void *pret;

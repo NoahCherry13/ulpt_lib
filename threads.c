@@ -39,7 +39,7 @@ struct thread_control_block {
 };
 
 static struct thread_control_block queue[128];
-static int t_running;
+static int t_running = 0;
 
 static void schedule()
 {
@@ -56,10 +56,9 @@ static void schedule()
       t_running = i;
       queue[i].t_stat = TS_RUNNING;
     }
-
+    
     if(i == MAX_THREADS-1) i = 0;
   }
-
   setjmp(queue[prev_thread_id].buf);
 
   longjmp(queue[t_running].buf, 1);
@@ -84,6 +83,10 @@ static void scheduler_init()
   queue[0].tid = 0;
   queue[0].t_stat = TS_READY;
 
+  for(int i = 1; i < MAX_THREADS; i++){
+    queue[i].t_stat = TS_FREE;
+  }
+  
   ualarm(quant, quant);
   
   //setup sighandler to call schedule when timer goes off
@@ -132,8 +135,8 @@ int pthread_create(
   queue[queue_ind].t_stat = TS_READY;
   setjmp(queue[queue_ind].buf);
   queue[queue_ind].tid = queue_ind;
-
   schedule();
+  printf("got here");
   
   /* TODO: Return 0 on successful thread creation, non-zero for an error.
    *       Be sure to set *thread on success.
@@ -189,10 +192,11 @@ pthread_t pthread_self(void)
 int pthread_join(pthread_t thread, void **retval)
 {
   //
-  if(queue[thread].t_stat == TS_EXITED){
-    sigaction(SIGALRM, SIG_DFL, NULL);
+  if(queue[thread].t_stat != TS_EXITED){
+    handler.sa_handler = SIG_DFL;
+    
   } else {
-
+    
   }
   return -1;
 }
