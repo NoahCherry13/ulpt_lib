@@ -39,12 +39,11 @@ struct thread_control_block {
 };
 
 static struct thread_control_block queue[128];
-//static int t_running;
+static int t_running;
 
-
-
-static void schedule(int signal)
+static void schedule()
 {
+  if
   /* 
      TODO: implement your round-robin scheduler, e.g., 
      - if whatever called us is not exiting 
@@ -57,7 +56,7 @@ static void schedule(int signal)
 }
 
 // to supress compiler error saying these static functions may not be used...
-static void schedule(int signal) __attribute__((unused));
+static void schedule() __attribute__((unused));
 
 
 static void scheduler_init()
@@ -115,7 +114,7 @@ int pthread_create(
   setjmp(queue[queue_ind].buf);
   queue[queue_ind].tid = queue_ind;
 
-
+  schedule();
   
   /* TODO: Return 0 on successful thread creation, non-zero for an error.
    *       Be sure to set *thread on success.
@@ -140,7 +139,7 @@ int pthread_create(
    * our case). The address to return to after finishing start_routine
    * should be the first thing you push on your stack.
    */
-  return -1;
+  return 0;
 }
 
 void pthread_exit(void *value_ptr)
@@ -154,7 +153,10 @@ void pthread_exit(void *value_ptr)
    * - Update the thread's status to indicate that it has exited
    * What would you do after this?
    */
-  exit(1);
+  queue[t_running].t_stat = TS_FREE;
+  free(queue[t_running].s_ptr);
+  schedule();
+  exit(0);
 }
 
 pthread_t pthread_self(void)
@@ -162,7 +164,7 @@ pthread_t pthread_self(void)
   /* 
    * TODO: Return the current thread instead of -1, note it is up to you what ptread_t refers to
    */
-  return -1;
+  return t_running;
 }
 
 int pthread_join(pthread_t thread, void **retval)
