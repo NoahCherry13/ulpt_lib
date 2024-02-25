@@ -43,7 +43,26 @@ static int t_running;
 
 static void schedule()
 {
-  if
+  // set current running thread to ready
+  if(queue[t_running].t_stat == TS_RUNNING){
+    queue[t_running].t_stat = TS_READY;
+  }
+  int prev_thread_id = t_running;
+  for (int i = t_running + 1; i < MAX_THREADS; i++){
+    if (i == prev_thread_id){
+      exit(0);
+    }
+    if(queue[i].t_stat == TS_READY){
+      t_running = i;
+      queue[i].t_stat = TS_RUNNING;
+    }
+
+    if(i == MAX_THREADS-1) i = 0;
+  }
+
+  setjmp(queue[prev_thread_id].buf);
+
+  longjmp(queue[t_running].buf, 1);
   /* 
      TODO: implement your round-robin scheduler, e.g., 
      - if whatever called us is not exiting 
@@ -153,7 +172,7 @@ void pthread_exit(void *value_ptr)
    * - Update the thread's status to indicate that it has exited
    * What would you do after this?
    */
-  queue[t_running].t_stat = TS_FREE;
+  queue[t_running].t_stat = TS_EXITED;
   free(queue[t_running].s_ptr);
   schedule();
   exit(0);
@@ -169,6 +188,12 @@ pthread_t pthread_self(void)
 
 int pthread_join(pthread_t thread, void **retval)
 {
+  //
+  if(queue[thread].t_stat == TS_EXITED){
+    sigaction(SIGALRM, SIG_DFL, NULL);
+  } else {
+
+  }
   return -1;
 }
 
