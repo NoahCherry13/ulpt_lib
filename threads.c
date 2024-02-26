@@ -52,11 +52,11 @@ static void schedule()
   int prev_thread_id = t_running;
   for (int i = t_running + 1; i < MAX_THREADS; i++){
 
-    /*
+    
     if (i == prev_thread_id&&prev_thread_id == 0){
       exit(0);
     }
-    */
+    
     
     if(queue[i].t_stat == TS_READY){
       t_running = i;
@@ -66,7 +66,7 @@ static void schedule()
     
     if(i == MAX_THREADS-1) i = 0;
   }
-  
+  printf("here\n");
   setjmp(queue[prev_thread_id].buf);
   longjmp(queue[t_running].buf, 1);
   /* 
