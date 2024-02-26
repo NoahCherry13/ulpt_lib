@@ -7,6 +7,8 @@
 #include <signal.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <sys/time.h>
+
 //-------------------------------------Initial Definitions ----------------------------------------------------------
 #define MAX_THREADS 128			/* number of threads you support */
 #define THREAD_STACK_SIZE (1<<15)	/* size of stack in bytes */
@@ -227,6 +229,7 @@ pthread_t pthread_self(void)
 int pthread_join(pthread_t thread, void **retval)
 {
   //
+  printf("joining %ld\n", thread);
   int queue_ind = 0;
   for(int i = 0; i < MAX_THREADS; i ++){
     if(queue[i].tid == thread){
