@@ -12,7 +12,7 @@
 #define THREAD_STACK_SIZE (1<<15)	/* size of stack in bytes */
 #define QUANTUM (50 * 1000)		/* quantum in usec */
 
-static useconds_t quant = (useconds_t)QUANTUM;
+//static useconds_t quant = (useconds_t)QUANTUM;
 static struct sigaction handler;
 
 /* 
@@ -51,16 +51,11 @@ static void schedule()
   // set current running thread to ready
   if(!setjmp(queue[t_running].buf)){
     if(queue[t_running].t_stat == TS_RUNNING){
+      printf("%d was running\n", t_running);
       queue[t_running].t_stat = TS_READY;
     }
-    int prev_thread_id = t_running;
+    //int prev_thread_id = t_running;
     for (int i = t_running + 1; i < MAX_THREADS; i++){
-      
-      /*
-	if (i == prev_thread_id&&prev_thread_id == 0){
-	exit(0);
-	}
-      */
       
       if(queue[i].t_stat == TS_READY){
 	t_running = i;
@@ -70,7 +65,7 @@ static void schedule()
       
       if(i == MAX_THREADS-1) i = 0;
     }
-    printf("t_running: %d\nprev_thread: %d\n", t_running, prev_thread_id);
+    //printf("t_running: %d\nprev_thread: %d\n", t_running, prev_thread_id);
     longjmp(queue[t_running].buf, 1);
     
   }
@@ -94,18 +89,21 @@ static void scheduler_init()
   //set tcb for calling thread
   queue[0].tid = 0;
   queue[0].t_stat = TS_READY;
+  queue[0].s_ptr = NULL;
+  setjmp(queue[0].buf);
 
   for(int i = 1; i < MAX_THREADS; i++){
     queue[i].t_stat = TS_FREE;
   }
   
-  ualarm(quant, quant);
+  
   
   //setup sighandler to call schedule when timer goes off
   sigemptyset(&handler.sa_mask);
   handler.sa_flags = SA_NODEFER;
   sigaction(SIGALRM, &handler, NULL);
   handler.sa_handler = &schedule;
+  ualarm(QUANTUM, QUANTUM);
   /* 
      TODO: do everything that is needed to initialize your scheduler.
      For example:
@@ -141,20 +139,22 @@ int pthread_create(
 
   int long_size = sizeof(unsigned long int);
   created_threads++;
-
   *thread = queue_ind;
-  queue[queue_ind].s_ptr = (unsigned long int *)malloc(THREAD_STACK_SIZE);
+
+  unsigned long int *s_ptr  = (unsigned long int *)malloc(THREAD_STACK_SIZE);
+  s_ptr = s_ptr+(THREAD_STACK_SIZE/sizeof(unsigned long int))-1;
+  queue[queue_ind].s_ptr = s_ptr;
+  *s_ptr = (unsigned long int)pthread_exit;
   
+  
+  setjmp(queue[queue_ind].buf);
   queue[queue_ind].buf->__jmpbuf[JBL_R12] = (unsigned long int) start_routine;
   queue[queue_ind].buf->__jmpbuf[JBL_R13] = (unsigned long int) arg;
   queue[queue_ind].buf->__jmpbuf[JBL_PC] = _ptr_mangle((unsigned long int)start_thunk);
   queue[queue_ind].buf->__jmpbuf[JBL_RSP] = _ptr_mangle((unsigned long int)(queue[queue_ind].s_ptr + (THREAD_STACK_SIZE/long_size - 1)));
 
-
-  *(queue[queue_ind].s_ptr + THREAD_STACK_SIZE/long_size -1) = (unsigned long int)pthread_exit;
-  queue[queue_ind].t_stat = TS_READY;
-  setjmp(queue[queue_ind].buf);
   queue[queue_ind].tid = created_threads;
+  queue[queue_ind].t_stat = TS_READY;
 
   num_thread++;
   schedule();
@@ -220,10 +220,17 @@ pthread_t pthread_self(void)
 int pthread_join(pthread_t thread, void **retval)
 {
   //
-  printf("joining %ld\n", thread);
-  while(queue[thread].t_stat != TS_EXITED);
-  queue[thread].t_stat = TS_FREE;
-  *retval = queue[thread].retval;
+  int queue_ind = 0;
+  for(int i = 0; i < MAX_THREADS; i ++){
+    if(queue[i].tid == thread){
+      queue_ind = i;
+      break;
+    }
+  }
+  while(queue[queue_ind].t_stat != TS_EXITED);
+  printf("exited loop\n");
+  queue[queue_ind].t_stat = TS_FREE;
+  *retval = queue[queue_ind].retval;
 	
   return 0;
 }
