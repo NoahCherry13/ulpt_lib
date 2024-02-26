@@ -197,6 +197,7 @@ int pthread_join(pthread_t thread, void **retval)
     handler.sa_handler = SIG_DFL;
   } else {
     queue[thread].t_stat = TS_FREE;
+  }
     return -1;
 }
 
