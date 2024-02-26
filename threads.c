@@ -35,13 +35,16 @@ struct thread_control_block {
   pthread_t tid;
   enum thread_status t_stat;
   jmp_buf buf;
-  int *s_ptr;
+  unsigned long int *s_ptr;
   void *retval;
 };
 
 static struct thread_control_block queue[128];
 static int t_running = 0;
 static int num_thread = 0;
+static int created_threads = 0;
+
+
 
 static void schedule()
 {
@@ -124,7 +127,9 @@ int pthread_create(
     scheduler_init();
   }
   int queue_ind = 1;
+
   //---------------Initialize TCB----------------------------
+
   while (queue_ind < MAX_THREADS && queue[queue_ind].t_stat != TS_FREE) {   //loop through queue until free index
     queue_ind++;
   }
@@ -135,18 +140,21 @@ int pthread_create(
   }
 
   int long_size = sizeof(unsigned long int);
-  
+  created_threads++;
+
   *thread = queue_ind;
-  queue[queue_ind].s_ptr = malloc(THREAD_STACK_SIZE);
+  queue[queue_ind].s_ptr = (unsigned long int *)malloc(THREAD_STACK_SIZE);
+  
   queue[queue_ind].buf->__jmpbuf[JBL_R12] = (unsigned long int) start_routine;
   queue[queue_ind].buf->__jmpbuf[JBL_R13] = (unsigned long int) arg;
   queue[queue_ind].buf->__jmpbuf[JBL_PC] = _ptr_mangle((unsigned long int)start_thunk);
-  queue[queue_ind].buf->__jmpbuf[JBL_RSP] = _ptr_mangle((unsigned long int)(queue[queue_ind].s_ptr + THREAD_STACK_SIZE/long_size - 1));
-  *(unsigned long*)(queue[queue_ind].s_ptr + THREAD_STACK_SIZE/long_size -1) = (unsigned long int)pthread_exit;
+  queue[queue_ind].buf->__jmpbuf[JBL_RSP] = _ptr_mangle((unsigned long int)(queue[queue_ind].s_ptr + (THREAD_STACK_SIZE/long_size - 1)));
+
+
+  *(queue[queue_ind].s_ptr + THREAD_STACK_SIZE/long_size -1) = (unsigned long int)pthread_exit;
   queue[queue_ind].t_stat = TS_READY;
   setjmp(queue[queue_ind].buf);
-  queue[queue_ind].tid = queue_ind;
-  printf("scheduling\n");
+  queue[queue_ind].tid = created_threads;
 
   num_thread++;
   schedule();
@@ -193,7 +201,11 @@ void pthread_exit(void *value_ptr)
   queue[t_running].t_stat = TS_EXITED;
   queue[t_running].retval = value_ptr;
   free(queue[t_running].s_ptr);
-  schedule();
+  if(num_thread == 0) exit(1);
+  else{
+    num_thread--;
+    schedule();
+  }
   exit(0);
 }
 
@@ -208,12 +220,10 @@ pthread_t pthread_self(void)
 int pthread_join(pthread_t thread, void **retval)
 {
   //
-  printf("joining thread\n");
+  printf("joining %ld\n", thread);
   while(queue[thread].t_stat != TS_EXITED);
   queue[thread].t_stat = TS_FREE;
-
   *retval = queue[thread].retval;
-  printf("finishing join\n");
 	
   return 0;
 }
