@@ -14,7 +14,7 @@
 #define THREAD_STACK_SIZE (1<<15)	/* size of stack in bytes */
 #define QUANTUM (50 * 1000)		/* quantum in usec */
 
-static useconds_t quant = (useconds_t)QUANTUM;
+//static useconds_t quant = (useconds_t)QUANTUM;
 //static struct sigaction handler;
 
 /* 
@@ -46,7 +46,9 @@ static int t_running = 0;
 static int num_thread = 0;
 static int created_threads = 0;
 
-
+static void handler_test(){
+  printf("timer went off\n");
+}
 
 static void schedule(){
   printf("scheduler called\n");
@@ -71,9 +73,10 @@ static void schedule(){
       
       if(i == MAX_THREADS-1) i = -1;
     }
+
     printf("switching to: %d\n", t_running);
     longjmp(queue[t_running].buf, 1);
-    
+
   }
   /* 
      TODO: implement your round-robin scheduler, e.g., 
@@ -109,8 +112,8 @@ static void scheduler_init()
   sigemptyset(&handler.sa_mask);
   handler.sa_flags = SA_NODEFER;
   sigaction(SIGALRM, &handler, NULL);
-  handler.sa_handler = schedule;
-  ualarm(quant, quant);
+  handler.sa_handler = &handler_test;
+  ualarm(QUANTUM, QUANTUM);
   /* 
      TODO: do everything that is needed to initialize your scheduler.
      For example:
@@ -146,14 +149,12 @@ int pthread_create(
 
  
   created_threads++;
-  *thread = queue_ind;
+  *thread = created_threads;
 
   unsigned long int *s_ptr  = (unsigned long int *)malloc(THREAD_STACK_SIZE);
   queue[queue_ind].s_ptr = s_ptr;
   s_ptr = s_ptr+(THREAD_STACK_SIZE/sizeof(unsigned long int))-1;
- 
   *s_ptr = (unsigned long int)pthread_exit;
-  
   
   setjmp(queue[queue_ind].buf);
   queue[queue_ind].buf->__jmpbuf[JBL_R12] = (unsigned long int) start_routine;
@@ -212,7 +213,6 @@ void pthread_exit(void *value_ptr)
   num_thread --;
   if(num_thread == 0) exit(1);
   else{
-    printf("scheduling\n");
     schedule();
   }
   exit(0);
@@ -230,6 +230,7 @@ int pthread_join(pthread_t thread, void **retval)
 {
   //
   printf("joining %ld\n", thread);
+  if(retval == NULL) return 0;
   int queue_ind = 0;
   for(int i = 0; i < MAX_THREADS; i ++){
     if(queue[i].tid == thread){

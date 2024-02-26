@@ -5,7 +5,7 @@
 #include <assert.h>
 
 /* How many threads (aside from main) to create */
-#define THREAD_CNT 3
+#define THREAD_CNT 10
 
 
 /* Each counter goes up to a multiple of this value. If your test is too fast
