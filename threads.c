@@ -12,8 +12,8 @@
 #define THREAD_STACK_SIZE (1<<15)	/* size of stack in bytes */
 #define QUANTUM (50 * 1000)		/* quantum in usec */
 
-//static useconds_t quant = (useconds_t)QUANTUM;
-static struct sigaction handler;
+static useconds_t quant = (useconds_t)QUANTUM;
+//static struct sigaction handler;
 
 /* 
    Thread_status identifies the current state of a thread. What states could a thread be in?
@@ -46,26 +46,30 @@ static int created_threads = 0;
 
 
 
-static void schedule()
-{
+static void schedule(){
+  printf("scheduler called\n");
   // set current running thread to ready
   if(!setjmp(queue[t_running].buf)){
+
+    /*
     if(queue[t_running].t_stat == TS_RUNNING){
       printf("%d was running\n", t_running);
       queue[t_running].t_stat = TS_READY;
     }
+    */
+    
     //int prev_thread_id = t_running;
     for (int i = t_running + 1; i < MAX_THREADS; i++){
-      
+     
       if(queue[i].t_stat == TS_READY){
 	t_running = i;
-	queue[i].t_stat = TS_RUNNING;
+	//queue[i].t_stat = TS_RUNNING;
 	break;
       }
       
-      if(i == MAX_THREADS-1) i = 0;
+      if(i == MAX_THREADS-1) i = -1;
     }
-    //printf("t_running: %d\nprev_thread: %d\n", t_running, prev_thread_id);
+    printf("switching to: %d\n", t_running);
     longjmp(queue[t_running].buf, 1);
     
   }
@@ -95,15 +99,16 @@ static void scheduler_init()
   for(int i = 1; i < MAX_THREADS; i++){
     queue[i].t_stat = TS_FREE;
   }
-  
-  
+
+  num_thread ++;
+  struct sigaction handler = {{0}};
   
   //setup sighandler to call schedule when timer goes off
   sigemptyset(&handler.sa_mask);
   handler.sa_flags = SA_NODEFER;
   sigaction(SIGALRM, &handler, NULL);
-  handler.sa_handler = &schedule;
-  ualarm(QUANTUM, QUANTUM);
+  handler.sa_handler = schedule;
+  ualarm(quant, quant);
   /* 
      TODO: do everything that is needed to initialize your scheduler.
      For example:
@@ -137,13 +142,14 @@ int pthread_create(
     return -1;
   }
 
-  int long_size = sizeof(unsigned long int);
+ 
   created_threads++;
   *thread = queue_ind;
 
   unsigned long int *s_ptr  = (unsigned long int *)malloc(THREAD_STACK_SIZE);
-  s_ptr = s_ptr+(THREAD_STACK_SIZE/sizeof(unsigned long int))-1;
   queue[queue_ind].s_ptr = s_ptr;
+  s_ptr = s_ptr+(THREAD_STACK_SIZE/sizeof(unsigned long int))-1;
+ 
   *s_ptr = (unsigned long int)pthread_exit;
   
   
@@ -151,7 +157,7 @@ int pthread_create(
   queue[queue_ind].buf->__jmpbuf[JBL_R12] = (unsigned long int) start_routine;
   queue[queue_ind].buf->__jmpbuf[JBL_R13] = (unsigned long int) arg;
   queue[queue_ind].buf->__jmpbuf[JBL_PC] = _ptr_mangle((unsigned long int)start_thunk);
-  queue[queue_ind].buf->__jmpbuf[JBL_RSP] = _ptr_mangle((unsigned long int)(queue[queue_ind].s_ptr + (THREAD_STACK_SIZE/long_size - 1)));
+  queue[queue_ind].buf->__jmpbuf[JBL_RSP] = _ptr_mangle((unsigned long int)s_ptr);
 
   queue[queue_ind].tid = created_threads;
   queue[queue_ind].t_stat = TS_READY;
@@ -197,13 +203,14 @@ void pthread_exit(void *value_ptr)
    * - Update the thread's status to indicate that it has exited
    * What would you do after this?
    */
-  printf("exiting thread\n");
+  printf("exiting thread %d\n", t_running);
   queue[t_running].t_stat = TS_EXITED;
   queue[t_running].retval = value_ptr;
   free(queue[t_running].s_ptr);
+  num_thread --;
   if(num_thread == 0) exit(1);
   else{
-    num_thread--;
+    printf("scheduling\n");
     schedule();
   }
   exit(0);
@@ -228,7 +235,6 @@ int pthread_join(pthread_t thread, void **retval)
     }
   }
   while(queue[queue_ind].t_stat != TS_EXITED);
-  printf("exited loop\n");
   queue[queue_ind].t_stat = TS_FREE;
   *retval = queue[queue_ind].retval;
 	
