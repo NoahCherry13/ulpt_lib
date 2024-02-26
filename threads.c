@@ -55,12 +55,13 @@ static void schedule()
     if(queue[i].t_stat == TS_READY){
       t_running = i;
       queue[i].t_stat = TS_RUNNING;
+      break;
     }
     
     if(i == MAX_THREADS-1) i = 0;
   }
+  
   setjmp(queue[prev_thread_id].buf);
-
   longjmp(queue[t_running].buf, 1);
   /* 
      TODO: implement your round-robin scheduler, e.g., 
@@ -194,11 +195,9 @@ int pthread_join(pthread_t thread, void **retval)
   //
   if(queue[thread].t_stat != TS_EXITED){
     handler.sa_handler = SIG_DFL;
-    
   } else {
-    
-  }
-  return -1;
+    queue[thread].t_stat = TS_FREE;
+    return -1;
 }
 
 /* 
