@@ -36,10 +36,12 @@ struct thread_control_block {
   enum thread_status t_stat;
   jmp_buf buf;
   int *s_ptr;
+  void *retval;
 };
 
 static struct thread_control_block queue[128];
 static int t_running = 0;
+static int num_thread = 0;
 
 static void schedule()
 {
@@ -49,9 +51,13 @@ static void schedule()
   }
   int prev_thread_id = t_running;
   for (int i = t_running + 1; i < MAX_THREADS; i++){
-    if (i == prev_thread_id){
+
+    /*
+    if (i == prev_thread_id&&prev_thread_id == 0){
       exit(0);
     }
+    */
+    
     if(queue[i].t_stat == TS_READY){
       t_running = i;
       queue[i].t_stat = TS_RUNNING;
@@ -136,8 +142,11 @@ int pthread_create(
   queue[queue_ind].t_stat = TS_READY;
   setjmp(queue[queue_ind].buf);
   queue[queue_ind].tid = queue_ind;
+  printf("scheduling\n");
+
+  num_thread++;
   schedule();
-  printf("got here");
+  
   
   /* TODO: Return 0 on successful thread creation, non-zero for an error.
    *       Be sure to set *thread on success.
@@ -177,6 +186,7 @@ void pthread_exit(void *value_ptr)
    * What would you do after this?
    */
   queue[t_running].t_stat = TS_EXITED;
+  queue[t_running].retval = value_ptr;
   free(queue[t_running].s_ptr);
   schedule();
   exit(0);
@@ -198,7 +208,7 @@ int pthread_join(pthread_t thread, void **retval)
   } else {
     queue[thread].t_stat = TS_FREE;
   }
-    return -1;
+    return 0;
 }
 
 /* 

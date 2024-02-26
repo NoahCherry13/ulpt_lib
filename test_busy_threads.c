@@ -5,7 +5,7 @@
 #include <assert.h>
 
 /* How many threads (aside from main) to create */
-#define THREAD_CNT 3
+#define THREAD_CNT 10
 
 
 /* Each counter goes up to a multiple of this value. If your test is too fast
@@ -56,6 +56,7 @@ int main(int argc, char **argv) {
   unsigned long int i;
   printf("making threads\n");
   for(i = 0; i < THREAD_CNT; i++) {
+    printf("creating thread %ld\n", i);
     pthread_create(&threads[i], NULL, count, (void *)i);
   }
   printf("Created all the threads\n");
