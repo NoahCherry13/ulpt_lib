@@ -46,29 +46,31 @@ static int num_thread = 0;
 static void schedule()
 {
   // set current running thread to ready
-  if(queue[t_running].t_stat == TS_RUNNING){
-    queue[t_running].t_stat = TS_READY;
-  }
-  int prev_thread_id = t_running;
-  for (int i = t_running + 1; i < MAX_THREADS; i++){
-
-    
-    if (i == prev_thread_id&&prev_thread_id == 0){
-      exit(0);
+  if(!setjmp(queue[t_running].buf)){
+    if(queue[t_running].t_stat == TS_RUNNING){
+      queue[t_running].t_stat = TS_READY;
     }
-    
-    
-    if(queue[i].t_stat == TS_READY){
-      t_running = i;
-      queue[i].t_stat = TS_RUNNING;
-      break;
+    int prev_thread_id = t_running;
+    for (int i = t_running + 1; i < MAX_THREADS; i++){
+      
+      /*
+	if (i == prev_thread_id&&prev_thread_id == 0){
+	exit(0);
+	}
+      */
+      
+      if(queue[i].t_stat == TS_READY){
+	t_running = i;
+	queue[i].t_stat = TS_RUNNING;
+	break;
+      }
+      
+      if(i == MAX_THREADS-1) i = 0;
     }
+    printf("t_running: %d\nprev_thread: %d\n", t_running, prev_thread_id);
+    longjmp(queue[t_running].buf, 1);
     
-    if(i == MAX_THREADS-1) i = 0;
   }
-  printf("here\n");
-  setjmp(queue[prev_thread_id].buf);
-  longjmp(queue[t_running].buf, 1);
   /* 
      TODO: implement your round-robin scheduler, e.g., 
      - if whatever called us is not exiting 
@@ -132,13 +134,15 @@ int pthread_create(
     return -1;
   }
 
+  int long_size = sizeof(unsigned long int);
+  
   *thread = queue_ind;
   queue[queue_ind].s_ptr = malloc(THREAD_STACK_SIZE);
   queue[queue_ind].buf->__jmpbuf[JBL_R12] = (unsigned long int) start_routine;
   queue[queue_ind].buf->__jmpbuf[JBL_R13] = (unsigned long int) arg;
   queue[queue_ind].buf->__jmpbuf[JBL_PC] = _ptr_mangle((unsigned long int)start_thunk);
-  queue[queue_ind].buf->__jmpbuf[JBL_RSP] = _ptr_mangle((unsigned long int)(queue[queue_ind].s_ptr + THREAD_STACK_SIZE/4 - 2));
-  *(unsigned long*)(queue[queue_ind].s_ptr + THREAD_STACK_SIZE/4-2) = (unsigned long int)pthread_exit;
+  queue[queue_ind].buf->__jmpbuf[JBL_RSP] = _ptr_mangle((unsigned long int)(queue[queue_ind].s_ptr + THREAD_STACK_SIZE/long_size - 1));
+  *(unsigned long*)(queue[queue_ind].s_ptr + THREAD_STACK_SIZE/long_size -1) = (unsigned long int)pthread_exit;
   queue[queue_ind].t_stat = TS_READY;
   setjmp(queue[queue_ind].buf);
   queue[queue_ind].tid = queue_ind;
@@ -185,6 +189,7 @@ void pthread_exit(void *value_ptr)
    * - Update the thread's status to indicate that it has exited
    * What would you do after this?
    */
+  printf("exiting thread\n");
   queue[t_running].t_stat = TS_EXITED;
   queue[t_running].retval = value_ptr;
   free(queue[t_running].s_ptr);
@@ -203,12 +208,14 @@ pthread_t pthread_self(void)
 int pthread_join(pthread_t thread, void **retval)
 {
   //
-  if(queue[thread].t_stat != TS_EXITED){
-    handler.sa_handler = SIG_DFL;
-  } else {
-    queue[thread].t_stat = TS_FREE;
-  }
-    return 0;
+  printf("joining thread\n");
+  while(queue[thread].t_stat != TS_EXITED);
+  queue[thread].t_stat = TS_FREE;
+
+  *retval = queue[thread].retval;
+  printf("finishing join\n");
+	
+  return 0;
 }
 
 /* 
