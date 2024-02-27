@@ -15,7 +15,7 @@
 #define QUANTUM (50 * 1000)		/* quantum in usec */
 
 //static useconds_t quant = (useconds_t)QUANTUM;
-//static struct sigaction handler;
+static struct sigaction handler;
 
 /* 
    Thread_status identifies the current state of a thread. What states could a thread be in?
@@ -46,12 +46,14 @@ static int t_running = 0;
 static int num_thread = 0;
 static int created_threads = 0;
 
-static void handler_test(){
+/*
+static void handler_test(int sig){
   printf("timer went off\n");
 }
+*/
 
 static void schedule(){
-  printf("scheduler called\n");
+  //printf("scheduler called\n");
   // set current running thread to ready
   if(!setjmp(queue[t_running].buf)){
 
@@ -74,7 +76,7 @@ static void schedule(){
       if(i == MAX_THREADS-1) i = -1;
     }
 
-    printf("switching to: %d\n", t_running);
+    //printf("switching to: %d\n", t_running);
     longjmp(queue[t_running].buf, 1);
 
   }
@@ -106,13 +108,13 @@ static void scheduler_init()
   }
 
   num_thread ++;
-  struct sigaction handler = {{0}};
+  // struct sigaction handler = {{0}};
   
   //setup sighandler to call schedule when timer goes off
   sigemptyset(&handler.sa_mask);
   handler.sa_flags = SA_NODEFER;
-  sigaction(SIGALRM, &handler, NULL);
-  handler.sa_handler = &handler_test;
+  sigaction(SIGALRM, & handler, 0);
+  handler.sa_handler = schedule;
   ualarm(QUANTUM, QUANTUM);
   /* 
      TODO: do everything that is needed to initialize your scheduler.
@@ -206,7 +208,7 @@ void pthread_exit(void *value_ptr)
    * - Update the thread's status to indicate that it has exited
    * What would you do after this?
    */
-  printf("exiting thread %d\n", t_running);
+  //printf("exiting thread %d\n", t_running);
   queue[t_running].t_stat = TS_EXITED;
   queue[t_running].retval = value_ptr;
   free(queue[t_running].s_ptr);
@@ -229,7 +231,7 @@ pthread_t pthread_self(void)
 int pthread_join(pthread_t thread, void **retval)
 {
   //
-  printf("joining %ld\n", thread);
+  //printf("joining %ld\n", thread);
   if(retval == NULL) return 0;
   int queue_ind = 0;
   for(int i = 0; i < MAX_THREADS; i ++){
