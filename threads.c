@@ -51,18 +51,11 @@ static void handler_test(int sig){
   printf("timer went off\n");
 }
 */
-
+void **retval;
 static void schedule(){
-  //printf("scheduler called\n");
+
   // set current running thread to ready
   if(!setjmp(queue[t_running].buf)){
-
-    /*
-    if(queue[t_running].t_stat == TS_RUNNING){
-      printf("%d was running\n", t_running);
-      queue[t_running].t_stat = TS_READY;
-    }
-    */
     
     //int prev_thread_id = t_running;
     for (int i = t_running + 1; i < MAX_THREADS; i++){
@@ -71,12 +64,14 @@ static void schedule(){
 	t_running = i;
 	//queue[i].t_stat = TS_RUNNING;
 	break;
+      }if(queue[i].t_stat == TS_EXITED){
+	pthread_join(i, retval);
       }
-      
+
       if(i == MAX_THREADS-1) i = -1;
     }
 
-    //printf("switching to: %d\n", t_running);
+
     longjmp(queue[t_running].buf, 1);
 
   }
@@ -113,8 +108,8 @@ static void scheduler_init()
   //setup sighandler to call schedule when timer goes off
   sigemptyset(&handler.sa_mask);
   handler.sa_flags = SA_NODEFER;
-  sigaction(SIGALRM, & handler, 0);
   handler.sa_handler = schedule;
+  sigaction(SIGALRM, &handler, NULL);
   ualarm(QUANTUM, QUANTUM);
   /* 
      TODO: do everything that is needed to initialize your scheduler.
@@ -231,7 +226,7 @@ pthread_t pthread_self(void)
 int pthread_join(pthread_t thread, void **retval)
 {
   //
-  //printf("joining %ld\n", thread);
+
   if(retval == NULL) return 0;
   int queue_ind = 0;
   for(int i = 0; i < MAX_THREADS; i ++){
@@ -240,7 +235,7 @@ int pthread_join(pthread_t thread, void **retval)
       break;
     }
   }
-  while(queue[queue_ind].t_stat != TS_EXITED);
+  while(queue[queue_ind].t_stat != TS_EXITED) schedule();
   queue[queue_ind].t_stat = TS_FREE;
   *retval = queue[queue_ind].retval;
 	
