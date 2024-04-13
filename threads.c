@@ -35,7 +35,13 @@ enum thread_status
  */
 
 struct pthread_mutex_t {
-  atomic_t
+  char lock;
+  int holding_thread;
+};
+
+struct pthread_barrier_t {
+  int w_threads;
+  pthread_t *w_list;
 };
 
 struct thread_control_block {
