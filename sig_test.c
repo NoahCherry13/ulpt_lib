@@ -31,7 +31,16 @@ int set_handler()
 
 void  disable_handler()
 {
+  sigset_tsigset;
+
+  //Initialize set to 0
   sigemptyset(&handler.sa_mask);
+  //Add the signal to the set
+  sigaddset(&handler.sa_mask, signal);
+  //Add the signals in the set to the process' blocked signals
+  sigprocmask(SIG_BLOCK, &handler.sa_mask, NULL);
+  if (signal == SIGALRM)
+    printf("Sig Blocked");
 }
 
 void  enable_handler()
