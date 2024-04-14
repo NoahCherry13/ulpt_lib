@@ -40,6 +40,7 @@ struct pthread_mutex_t {
 };
 
 struct pthread_barrier_t {
+  int count;
   int w_threads;
   pthread_t *w_list;
 };
