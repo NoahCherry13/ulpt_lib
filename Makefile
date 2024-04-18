@@ -5,7 +5,7 @@ override CFLAGS := -Wall -Werror -std=gnu99 -O0 -g $(CFLAGS) -I.
 #override LDFLAGS := -fsanitize=undefined -fsanitize=leak $(LDLAGS)  
 
 # Add any additional tests here
-test_files=./test_busy_threads
+test_files=./test_busy_threads mutex_test
 
 all: check
 
@@ -27,7 +27,7 @@ threads.o: threads.c ec440threads.h
 # rules to build each of the tests
 test_busy_threads.o : test_busy_threads.c 
 test_busy_threads: test_busy_threads.o $(mythread)
-
+mutex_test: mutex_test.o threads.o
 
 .PHONY: clean check checkprogs
 
