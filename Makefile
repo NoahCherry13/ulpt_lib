@@ -5,7 +5,7 @@ override CFLAGS := -Wall -Werror -std=gnu99 -O0 -g $(CFLAGS) -I.
 #override LDFLAGS := -fsanitize=undefined -fsanitize=leak $(LDLAGS)  
 
 # Add any additional tests here
-test_files=./test_busy_threads mutex_test
+test_files=./test_busy_threads ./mutex_test ./sig_test
 
 all: check
 

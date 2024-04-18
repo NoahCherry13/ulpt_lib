@@ -23,7 +23,7 @@ int set_handler()
 {
   sigemptyset(&handler.sa_mask);
   handler.sa_flags = SA_NODEFER;
-  handler.sa_handler = handle_function;
+  handler.sa_handler = (void*)handle_function;
   sigaction(SIGALRM, &handler, NULL); 
   ualarm(QUANTUM, QUANTUM);
   return 0;
@@ -31,25 +31,18 @@ int set_handler()
 
 void  disable_handler()
 {
-  sigset_tsigset;
-
-  //Initialize set to 0
-  sigemptyset(&handler.sa_mask);
-  //Add the signal to the set
-  sigaddset(&handler.sa_mask, signal);
-  //Add the signals in the set to the process' blocked signals
-  sigprocmask(SIG_BLOCK, &handler.sa_mask, NULL);
-  if (signal == SIGALRM)
-    printf("Sig Blocked");
+  sigset_t sig;
+  sigemptyset(&sig);
+  sigaddset(&sig, SIGALRM);
+  sigprocmask(SIG_BLOCK, &sig, NULL);
 }
 
 void  enable_handler()
 {
-  sigemptyset(&handler.sa_mask);
-  handler.sa_flags = SA_NODEFER;
-  handler.sa_handler = handle_function;
-  sigaction(SIGALRM, &handler, NULL);
-  ualarm(QUANTUM, QUANTUM);
+  sigset_t sig;
+  sigemptyset(&sig);
+  sigaddset(&sig, SIGALRM);
+  sigprocmask(SIG_UNBLOCK, &sig, NULL);
 }
 
 int main()
@@ -59,7 +52,7 @@ int main()
 
   printf("counting\n");
   int cnt = 0;
-  for (int i = 0; i < 0xFFFFFFFF; i++){
+  for (int i = 0; i < 0x0FFFFFFF; i++){
     cnt++;
   }
 
@@ -67,8 +60,16 @@ int main()
   disable_handler();
 
   printf("counting\n");
-  int count = 0;
-  for (int i = 0; i < 0xFFFFFFFF; i++){
+  for (int i = 0; i < 0x0FFFFFFF; i++){
+    cnt++;
+  }
+
+  printf("Re-enabling handler\n");
+  enable_handler();
+
+  printf("counting\n");
+
+  for (int i = 0; i < 0x0FFFFFFF; i++){
     cnt++;
   }
   

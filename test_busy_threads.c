@@ -16,16 +16,19 @@
 
 // locations for  return values
 int some_value[THREAD_CNT];
-
+char test_lock = 0;
 /* Waste some time by counting to a big number.
  *
  * Alternatively, introduce your own sleep function to waste a specific amount
  * of time. But make sure it plays nice with your scheduler's interrupts (HINT:
  * see the man page in section 2 for nanosleep, and its possible ERROR codes).
  */
+pthread_mutex_t mutex;
+
 void *
 count(void *arg)
 {
+  if (test_lock) pthread_mutex_lock(&mutex);
   int my_num = (long int)arg;
   int c = (my_num + 1) * COUNTER_FACTOR;
   int i;
@@ -35,7 +38,7 @@ count(void *arg)
     }
   }
   some_value[my_num]=my_num;
-  
+  if (test_lock) pthread_mutex_unlock(&mutex);
   pthread_exit(&some_value[my_num]);
   return NULL;
 }
@@ -53,6 +56,7 @@ count(void *arg)
  */
 int main(int argc, char **argv) {
   pthread_t threads[THREAD_CNT];
+  pthread_mutex_init(&mutex, NULL);
   unsigned long int i;
   printf("making threads\n");
   for(i = 0; i < THREAD_CNT; i++) {
@@ -68,5 +72,6 @@ int main(int argc, char **argv) {
     ret = *(int *)pret;
     assert(ret == i);
   }
+  pthread_mutex_destroy(&mutex);
   return 0;
 }
