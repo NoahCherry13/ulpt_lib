@@ -32,8 +32,10 @@ enum thread_status
 enum lock_status
 {
  MTX_OPEN,
- MTX_LOCKED
+ MTX_LOCKED,
+ MTX_KILL
 };
+
 /* The thread control block stores information about a thread. You will
  * need one of this per thread. What information do you need in it? 
  * Hint, remember what information Linux maintains for each task?
@@ -41,7 +43,7 @@ enum lock_status
 
 struct my_mutex_t {
   enum lock_status locked;
-  int holding_thread;
+  pthread_t holding_thread;
   struct thread_control_block *head;
   struct thread_control_block *tail;
 };
@@ -58,6 +60,7 @@ struct thread_control_block {
   jmp_buf buf;
   unsigned long int *s_ptr;
   void *retval;
+  struct thread_control_block *next_blocked;
 };
 
 static struct thread_control_block queue[128];
@@ -268,6 +271,23 @@ int pthread_join(pthread_t thread, void **retval)
  * that have their own main functions.
  */
 
+static void lock()
+{
+  sigset_t sig;
+  sigemptyset(&sig);
+  sigaddset(&sig, SIGALRM);
+  sigprocmask(SIG_BLOCK, &sig, NULL);
+
+}
+
+static void unlock()
+{
+  sigset_t sig;
+  sigemptyset(&sig);
+  sigaddset(&sig, SIGALRM);
+  sigprocmask(SIG_UNBLOCK, &sig, NULL);
+
+}
 
 int pthread_mutex_init(pthread_mutex_t *restrict mutex, const pthread_mutexattr_t *restrict attr)
 {
@@ -276,20 +296,46 @@ int pthread_mutex_init(pthread_mutex_t *restrict mutex, const pthread_mutexattr_
   my_mutex->head = NULL;
   my_mutex->tail = NULL;
   my_mutex->locked = MTX_OPEN;
-
+  my_mutex->holding_thread = -1;
+  
   return 0;
 }
 
 int pthread_mutex_destroy(pthread_mutex_t *mutex)
 {
+  lock();
+  struct my_mutex_t *my_mutex = (struct my_mutex_t *) mutex;
+  assert(sizeof(struct my_mutex_t) <= sizeof(pthread_mutex_t));
+  if (my_mutex->locked == MTX_LOCKED){
+    printf("Mutex is still Locked! Failed to Destroy\n");
+    return -1;
+  }
 
-  return -1;
+  my_mutex->locked = MTX_KILL;
+  unlock();
+  
+  return 0;
 }
 
 int pthread_mutex_lock(pthread_mutex_t *mutex)
 {
+  lock();
+  struct my_mutex_t *my_mutex = (struct my_mutex_t *) mutex;
+  assert(sizeof(struct my_mutex_t) <= sizeof(pthread_mutex_t));
 
-  return -1;
+  if (my_mutex->locked == MTX_FREE){
+    my_mutex->locked == MTX_LOCKED;
+    my_mutex->holding_thread == pthread_self();
+  } else {
+    if (my_mutex->head == NULL){
+      my_mutex->head == queue[t_running];
+      my_mutex->tail == queue[t_running];
+    } else {
+      my_mutex->tail->next_blocked == queue[t_running];
+      my_mutex->tail = queue[t_running];
+    }
+  }
+
 }
 
 int pthread_mutex_unlock(pthread_mutex_t *mutex)
@@ -316,7 +362,7 @@ int pthread_barrier_wait(pthread_barrier_t *barrier)
 
   return -1;
 }
-
+/*
 static void lock()
 {
   sigset_t sig;
@@ -334,3 +380,4 @@ static void unlock()
   sigprocmask(SIG_UNBLOCK, &sig, NULL);
 
 }
+*/
