@@ -26,7 +26,8 @@ enum thread_status
  TS_EXITED,
  TS_RUNNING,
  TS_READY,
- TS_FREE
+ TS_FREE,
+ TS_BLOCKED
 };
 
 enum lock_status
@@ -337,9 +338,13 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
       my_mutex->tail->next_blocked = &queue[t_running];
       my_mutex->tail = &queue[t_running];
     }
+
+    queue[t_running].t_stat = TS_BLOCKED;
+    unlock();
+    schedule();
   }
 
-
+  unlock();
   
   return 0;
 }
@@ -347,6 +352,33 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
 int pthread_mutex_unlock(pthread_mutex_t *mutex)
 {
 
+  lock();
+  struct my_mutex_t *my_mutex = (struct my_mutex_t *) mutex;
+ 
+
+  assert(sizeof(struct my_mutex_t) <= sizeof(pthread_mutex_t));
+
+  if(my_mutex->holding_thread != pthread_self()){
+    printf("Can't unlock thread held by other process\n");
+    unlock();
+    return -1;
+  }
+  
+  if (my_mutex->locked == MTX_LOCKED){
+    my_mutex->locked = MTX_OPEN;
+    if(my_mutex->head == NULL){
+      unlock();
+      return 0;
+    }
+    my_mutex->head = my_mutex->head->next_blocked;
+    if ( my_mutex->head == NULL){
+      my_mutex->tail = NULL;
+    }
+
+    unlock();
+    return 0;
+  }
+  
   return -1;
 }
 
