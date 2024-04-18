@@ -323,19 +323,25 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
   struct my_mutex_t *my_mutex = (struct my_mutex_t *) mutex;
   assert(sizeof(struct my_mutex_t) <= sizeof(pthread_mutex_t));
 
-  if (my_mutex->locked == MTX_FREE){
-    my_mutex->locked == MTX_LOCKED;
-    my_mutex->holding_thread == pthread_self();
-  } else {
+  if (my_mutex->locked == MTX_KILL){ 
+    printf("Mutex was destroyed. Lock Failed\n");
+    return -1;
+  }else if (my_mutex->locked == MTX_OPEN){  // if lock is free lock it and assign thread
+    my_mutex->locked = MTX_LOCKED;
+    my_mutex->holding_thread = pthread_self();
+  } else {                           // if lock is claimed add calling thread to waiting list
     if (my_mutex->head == NULL){
-      my_mutex->head == queue[t_running];
-      my_mutex->tail == queue[t_running];
+      my_mutex->head = &queue[t_running];
+      my_mutex->tail = &queue[t_running];
     } else {
-      my_mutex->tail->next_blocked == queue[t_running];
-      my_mutex->tail = queue[t_running];
+      my_mutex->tail->next_blocked = &queue[t_running];
+      my_mutex->tail = &queue[t_running];
     }
   }
 
+
+  
+  return 0;
 }
 
 int pthread_mutex_unlock(pthread_mutex_t *mutex)
