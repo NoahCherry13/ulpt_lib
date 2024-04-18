@@ -28,18 +28,24 @@ enum thread_status
  TS_READY,
  TS_FREE
 };
-
+enum lock_status
+{
+ MTX_FREE,
+ MTX_LOCKED
+};
 /* The thread control block stores information about a thread. You will
  * need one of this per thread. What information do you need in it? 
  * Hint, remember what information Linux maintains for each task?
  */
 
-struct pthread_mutex_t {
-  char lock;
+struct my_mutex_t {
+  enum lock;
   int holding_thread;
+  struct thread_control_block *head;
+  struct thread_control_block *tail;
 };
 
-struct pthread_barrier_t {
+struct my_barrier_t {
   int count;
   int w_threads;
   pthread_t *w_list;
@@ -264,8 +270,12 @@ int pthread_join(pthread_t thread, void **retval)
 
 int pthread_mutex_init(pthread_mutex_t *restrict mutex, const pthread_mutexattr_t *restrict attr)
 {
-
-  return -1;
+  struct my_mutex_t *my_mutex = (my_mutex_t *) mutex;
+  assert(sizeof(my_mutex_t) <= sizeof(pthread_mutex_t));
+  my_mutex->head = NULL;
+  my_mutex->tail = NULL;
+  my_mutex->locked = OPEN
+  
 }
 
 int pthread_mutex_destroy(pthread_mutex_t *mutex)
