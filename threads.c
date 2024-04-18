@@ -28,9 +28,10 @@ enum thread_status
  TS_READY,
  TS_FREE
 };
+
 enum lock_status
 {
- MTX_FREE,
+ MTX_OPEN,
  MTX_LOCKED
 };
 /* The thread control block stores information about a thread. You will
@@ -39,7 +40,7 @@ enum lock_status
  */
 
 struct my_mutex_t {
-  enum lock;
+  enum lock_status locked;
   int holding_thread;
   struct thread_control_block *head;
   struct thread_control_block *tail;
@@ -270,12 +271,13 @@ int pthread_join(pthread_t thread, void **retval)
 
 int pthread_mutex_init(pthread_mutex_t *restrict mutex, const pthread_mutexattr_t *restrict attr)
 {
-  struct my_mutex_t *my_mutex = (my_mutex_t *) mutex;
-  assert(sizeof(my_mutex_t) <= sizeof(pthread_mutex_t));
+  struct my_mutex_t *my_mutex = (struct my_mutex_t *) mutex;
+  assert(sizeof(struct my_mutex_t) <= sizeof(pthread_mutex_t));
   my_mutex->head = NULL;
   my_mutex->tail = NULL;
-  my_mutex->locked = OPEN
-  
+  my_mutex->locked = MTX_OPEN;
+
+  return 0;
 }
 
 int pthread_mutex_destroy(pthread_mutex_t *mutex)
@@ -317,12 +319,18 @@ int pthread_barrier_wait(pthread_barrier_t *barrier)
 
 static void lock()
 {
+  sigset_t sig;
+  sigemptyset(&sig);
+  sigaddset(&sig, SIGALRM);
+  sigprocmask(SIG_BLOCK, &sig, NULL);
 
-  return -1;
 }
 
 static void unlock()
 {
+  sigset_t sig;
+  sigemptyset(&sig);
+  sigaddset(&sig, SIGALRM);
+  sigprocmask(SIG_UNBLOCK, &sig, NULL);
 
-  return -1;
 }
