@@ -419,13 +419,17 @@ int pthread_barrier_wait(pthread_barrier_t *barrier)
   // max number of blocked threads is reached
   if (my_barrier->w_threads == my_barrier->count-1){
     my_barrier->w_threads = 0;
-    for (int i = 0; i < my_barrier->count; i++){
+    for (int i = 0; i < my_barrier->count-1; i++){
       my_barrier->w_list[i]->t_stat = TS_READY;
-    }  
+      printf("setting thread {%d} to ready\n", i);
+    }
+    unlock();
+    return PTHREAD_BARRIER_SERIAL_THREAD;
   }
   // max blocked threads not reached, add thread to blocked list
   else{
     my_barrier->w_threads++;
+    queue[t_running].t_stat = TS_BLOCKED;
     my_barrier->w_list[my_barrier->w_threads-1] = &queue[t_running];
     unlock();
     schedule();
