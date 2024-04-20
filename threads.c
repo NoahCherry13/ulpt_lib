@@ -41,7 +41,8 @@ enum barrier_status
 {
  PB_FREE,
  PB_KILL
-}
+};
+
 /* The thread control block stores information about a thread. You will
  * need one of this per thread. What information do you need in it? 
  * Hint, remember what information Linux maintains for each task?
@@ -58,6 +59,7 @@ struct my_barrier_t {
   int count;
   int w_threads;
   pthread_t **w_list;
+  enum barrier_status status;
 };
 
 struct thread_control_block {
@@ -387,12 +389,14 @@ int pthread_barrier_init(pthread_barrier_t *restrict barrier,
 			 const pthread_barrierattr_t *restrict attr,
 			 unsigned count){
   lock();
-  my_barrier_t *my_barrier = (my_barrier_t *)barrier;
+  struct my_barrier_t *my_barrier = (struct my_barrier_t *)barrier;
   my_barrier->count = count;
   my_barrier->w_threads = 0;
-  my_barrier->w_list = malloc(count * sizeof(thread_control_block *));
+  my_barrier->w_list = malloc(count * sizeof(struct thread_control_block *));
   my_barrier->status = PB_FREE;
-  return -1;
+
+  unlock();
+  return 0;
 }
 
 int pthread_barrier_destroy(pthread_barrier_t *barrier)
