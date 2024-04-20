@@ -401,7 +401,10 @@ int pthread_barrier_init(pthread_barrier_t *restrict barrier,
 
 int pthread_barrier_destroy(pthread_barrier_t *barrier)
 {
-
+  lock();
+  struct my_barrier_t *my_barrier = (struct my_barrier_t *)barrier;
+  my_barrier->status = PB_KILL;
+  unlock();
   return -1;
 }
 
