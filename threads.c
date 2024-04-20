@@ -58,7 +58,7 @@ struct my_mutex_t {
 struct my_barrier_t {
   int count;
   int w_threads;
-  pthread_t **w_list;
+  struct thread_control_block **w_list;
   enum barrier_status status;
 };
 
@@ -392,7 +392,7 @@ int pthread_barrier_init(pthread_barrier_t *restrict barrier,
   struct my_barrier_t *my_barrier = (struct my_barrier_t *)barrier;
   my_barrier->count = count;
   my_barrier->w_threads = 0;
-  my_barrier->w_list = malloc(count * sizeof(struct thread_control_block *));
+  my_barrier->w_list = (struct thread_control_block **)malloc(count * sizeof(struct thread_control_block *));
   my_barrier->status = PB_FREE;
 
   unlock();
@@ -403,6 +403,9 @@ int pthread_barrier_destroy(pthread_barrier_t *barrier)
 {
   lock();
   struct my_barrier_t *my_barrier = (struct my_barrier_t *)barrier;
+  my_barrier->w_threads = 0;
+  my_barrier->w_list = NULL;
+  my_barrier->count = -1;
   my_barrier->status = PB_KILL;
   unlock();
   return -1;
@@ -410,6 +413,22 @@ int pthread_barrier_destroy(pthread_barrier_t *barrier)
 
 int pthread_barrier_wait(pthread_barrier_t *barrier)
 {
+  lock();
+  struct my_barrier_t *my_barrier = (struct my_barrier_t *)barrier;
 
-  return -1;
+  // max number of blocked threads is reached
+  if (my_barrier->w_threads == my_barrier->count-1){
+    my_barrier->w_threads = 0;
+    for (int i = 0; i < my_barrier->count; i++){
+      my_barrier->w_list[i]->t_stat = TS_READY;
+    }  
+  }
+  // max blocked threads not reached, add thread to blocked list
+  else{
+    my_barrier->w_threads++;
+    my_barrier->w_list[my_barrier->w_threads-1] = &queue[t_running];
+    unlock();
+    schedule();
+  }
+  return 0;
 }
