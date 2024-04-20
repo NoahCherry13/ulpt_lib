@@ -12,7 +12,7 @@
  * use a bigger number. Too slow? Use a smaller number. See the comment about
  * sleeping in count() to avoid this size-tuning issue.
  */
-#define COUNTER_FACTOR 100000
+#define COUNTER_FACTOR 1000000
 
 // locations for  return values
 int some_value[THREAD_CNT];
@@ -33,7 +33,7 @@ count(void *arg)
   int c = (my_num + 1) * COUNTER_FACTOR;
   int i;
   for (i = 0; i < c; i++) {
-    if ((i % 10000) == 0) {
+    if ((i % 50000) == 0) {
       printf("id: 0x%lx num %d counted to %d of %d\n", pthread_self(), my_num, i, c);
     }
   }

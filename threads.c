@@ -37,6 +37,11 @@ enum lock_status
  MTX_KILL
 };
 
+enum barrier_status
+{
+ PB_FREE,
+ PB_KILL
+}
 /* The thread control block stores information about a thread. You will
  * need one of this per thread. What information do you need in it? 
  * Hint, remember what information Linux maintains for each task?
@@ -52,7 +57,7 @@ struct my_mutex_t {
 struct my_barrier_t {
   int count;
   int w_threads;
-  pthread_t *w_list;
+  pthread_t **w_list;
 };
 
 struct thread_control_block {
@@ -80,12 +85,10 @@ static void schedule(){
   // set current running thread to ready
   if(!setjmp(queue[t_running].buf)){
     
-    //int prev_thread_id = t_running;
     for (int i = t_running + 1; i < MAX_THREADS; i++){
      
       if(queue[i].t_stat == TS_READY){
 	t_running = i;
-	//queue[i].t_stat = TS_RUNNING;
 	break;
       }if(queue[i].t_stat == TS_EXITED){
 	pthread_join(i, retval);
@@ -383,7 +386,12 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
 int pthread_barrier_init(pthread_barrier_t *restrict barrier,
 			 const pthread_barrierattr_t *restrict attr,
 			 unsigned count){
-
+  lock();
+  my_barrier_t *my_barrier = (my_barrier_t *)barrier;
+  my_barrier->count = count;
+  my_barrier->w_threads = 0;
+  my_barrier->w_list = malloc(count * sizeof(thread_control_block *));
+  my_barrier->status = PB_FREE;
   return -1;
 }
 
@@ -398,22 +406,3 @@ int pthread_barrier_wait(pthread_barrier_t *barrier)
 
   return -1;
 }
-/*
-static void lock()
-{
-  sigset_t sig;
-  sigemptyset(&sig);
-  sigaddset(&sig, SIGALRM);
-  sigprocmask(SIG_BLOCK, &sig, NULL);
-
-}
-
-static void unlock()
-{
-  sigset_t sig;
-  sigemptyset(&sig);
-  sigaddset(&sig, SIGALRM);
-  sigprocmask(SIG_UNBLOCK, &sig, NULL);
-
-}
-*/
