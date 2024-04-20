@@ -274,6 +274,7 @@ int pthread_join(pthread_t thread, void **retval)
 
 static void lock()
 {
+  printf("locking thread\n");
   sigset_t sig;
   sigemptyset(&sig);
   sigaddset(&sig, SIGALRM);
@@ -283,6 +284,7 @@ static void lock()
 
 static void unlock()
 {
+  printf("unlocking thread\n");
   sigset_t sig;
   sigemptyset(&sig);
   sigaddset(&sig, SIGALRM);
@@ -343,16 +345,12 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
     unlock();
     schedule();
   }
-
-  unlock();
   
   return 0;
 }
 
 int pthread_mutex_unlock(pthread_mutex_t *mutex)
 {
-
-  lock();
   struct my_mutex_t *my_mutex = (struct my_mutex_t *) mutex;
  
 
