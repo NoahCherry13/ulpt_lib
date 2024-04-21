@@ -17,7 +17,7 @@
 // locations for  return values
 int some_value[THREAD_CNT];
 char test_lock = 1;
-char test_barrier = 1;
+char test_barrier = 0;
 /* Waste some time by counting to a big number.
  *
  * Alternatively, introduce your own sleep function to waste a specific amount
@@ -35,7 +35,7 @@ count(void *arg)
   int c = (my_num + 1) * COUNTER_FACTOR;
   int i;
   for (i = 0; i < c; i++) {
-    if ((i % 50000) == 0) {
+    if ((i % 20000) == 0) {
       printf("id: 0x%lx num %d counted to %d of %d\n", pthread_self(), my_num, i, c);
     }
   }

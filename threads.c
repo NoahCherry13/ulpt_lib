@@ -279,7 +279,7 @@ int pthread_join(pthread_t thread, void **retval)
 
 static void lock()
 {
-  printf("locking thread\n");
+  //printf("locking thread\n");
   sigset_t sig;
   sigemptyset(&sig);
   sigaddset(&sig, SIGALRM);
@@ -289,7 +289,7 @@ static void lock()
 
 static void unlock()
 {
-  printf("unlocking thread\n");
+  //printf("unlocking thread\n");
   sigset_t sig;
   sigemptyset(&sig);
   sigaddset(&sig, SIGALRM);
@@ -338,6 +338,7 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
     my_mutex->locked = MTX_LOCKED;
     my_mutex->holding_thread = pthread_self();
   } else {                           // if lock is claimed add calling thread to waiting list
+    //printf("blocking thread %d\n", t_running);
     if (my_mutex->head == NULL){
       my_mutex->head = &queue[t_running];
       my_mutex->tail = &queue[t_running];
@@ -350,7 +351,7 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
     unlock();
     schedule();
   }
-  
+  unlock();
   return 0;
 }
 
@@ -362,7 +363,7 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
   assert(sizeof(struct my_mutex_t) <= sizeof(pthread_mutex_t));
 
   if(my_mutex->holding_thread != pthread_self()){
-    printf("Can't unlock thread held by other process\n");
+    //printf("Can't unlock thread held by other process\n");
     unlock();
     return -1;
   }
@@ -373,6 +374,7 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
       unlock();
       return 0;
     }
+    my_mutex->head->t_stat = TS_READY;
     my_mutex->head = my_mutex->head->next_blocked;
     if ( my_mutex->head == NULL){
       my_mutex->tail = NULL;
@@ -421,7 +423,7 @@ int pthread_barrier_wait(pthread_barrier_t *barrier)
     my_barrier->w_threads = 0;
     for (int i = 0; i < my_barrier->count-1; i++){
       my_barrier->w_list[i]->t_stat = TS_READY;
-      printf("setting thread {%d} to ready\n", i);
+      //printf("setting thread {%d} to ready\n", i);
     }
     unlock();
     return PTHREAD_BARRIER_SERIAL_THREAD;
